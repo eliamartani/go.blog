@@ -5,41 +5,17 @@ import (
 	"net/http"
 	"strconv"
 
-	database "../database"
+	model "../model"
+	repository "../repository"
 	"github.com/gorilla/mux"
 )
 
-// Post is an entity representation from database
-type Post struct {
-	ID            int    `json:"id"`
-	CategoryID    int    `json:"categoryid"`
-	Title         string `json:"title"`
-	URL           string `json:"url"`
-	Content       string `json:"content"`
-	DateCreation  string `json:"datecreation"`
-	DatePublished string `json:"datepublished"`
-	Author        string `json:"author"`
-	Active        byte   `json:"active"`
-}
-
-// SQL Queries
-const getQuery = "SELECT ID, CategoryID, Title, Url, Content, cast(DateCreation as char) DateCreation, ifnull(cast(DatePublished as char), '') DatePublished, Author, Active from post WHERE ID = ?"
-const allQuery = "SELECT ID, CategoryID, Title, Url, cast(DateCreation as char) DateCreation, ifnull(cast(DatePublished as char), '') DatePublished, Author, Active from post"
-const pagedQuery = `SELECT ID, CategoryID, Title, Url, cast(DateCreation as char) DateCreation, ifnull(cast(DatePublished as char), '') DatePublished, Author, Active from post
-where Active = 1 and (DatePublished <= now() or DatePublished is null)
-ORDER BY IfNull(DatePublished, DateCreation), ID
-LIMIT ? OFFSET ?`
-const insertQuery = "INSERT INTO post (ID, CategoryID, Title, Url, Content, Author, DateCreation, DatePublished, Active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+var repoBlog = repository.NewRepoBlog()
 
 // GetBlog is the main endpoint
 func GetBlog(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[INFO]", "Entering endpoint "+r.URL.RequestURI())
 
-	// open connection
-	db := database.Connect()
-
-	// close the connection at the end
-	defer db.Close()
 	defer fmt.Println("[INFO]", "Closing current connection...")
 
 	// get variables
@@ -52,13 +28,10 @@ func GetBlog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// retrieve object from database
-	var post Post
-
-	err = db.QueryRow(getQuery, key).Scan(&post.ID, &post.CategoryID, &post.Title, &post.URL, &post.Content, &post.DateCreation, &post.DatePublished, &post.Author, &post.Active)
+	post, err := repoBlog.Get(key)
 
 	if HasError(err) {
-		ResponseJSON(w, NoDataFound())
+		ResponseJSON(w, ServerError())
 		return
 	}
 
@@ -68,61 +41,17 @@ func GetBlog(w http.ResponseWriter, r *http.Request) {
 
 // ListBlog retrieve all blog posts
 func ListBlog(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("[INFO]", "Entering endpoint "+r.URL.RequestURI())
-
-	// open connection
-	db := database.Connect()
-
-	defer db.Close()
-	defer fmt.Println("[INFO]", "Closing current connection...")
-
-	// retrieve object from database
-	results, err := db.Query(allQuery)
-
-	if HasError(err) {
-		ResponseJSON(w, ServerError())
-		return
-	}
-
-	var posts []Post
-
-	for results.Next() {
-		var post Post
-
-		err := results.Scan(&post.ID, &post.CategoryID, &post.Title, &post.URL, &post.DateCreation, &post.DatePublished, &post.Author, &post.Active)
-
-		if HasError(err) {
-			ResponseJSON(w, ServerError())
-			return
-		}
-
-		posts = append(posts, post)
-	}
-
-	if posts == nil {
-		ResponseJSON(w, NoDataFound())
-		return
-	}
-
-	// returns json with Response representation
-	ResponseJSON(w, ToResponse(posts))
+	processListBlog(w, r, 10, 1)
 }
 
 // ListPagedBlog retrieve all blog posts within an interval
 func ListPagedBlog(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("[INFO]", "Entering endpoint "+r.URL.RequestURI())
-
-	// open connection
-	db := database.Connect()
-
-	defer db.Close()
-	defer fmt.Println("[INFO]", "Closing current connection...")
-
 	// get variables
 	vars := mux.Vars(r)
 
 	length, err := strconv.Atoi(vars["length"])
 
+	//check if length is valid
 	if HasError(err) {
 		ResponseJSON(w, ServerError())
 		return
@@ -130,32 +59,26 @@ func ListPagedBlog(w http.ResponseWriter, r *http.Request) {
 
 	index, err := strconv.Atoi(vars["index"])
 
+	// check if index is valid
 	if HasError(err) {
 		ResponseJSON(w, ServerError())
 		return
 	}
 
-	// retrieve object from database
-	results, err := db.Query(pagedQuery, length, index)
+	processListBlog(w, r, length, index)
+}
+
+// processListBlog process both request, with or without parameter
+func processListBlog(w http.ResponseWriter, r *http.Request, length int, index int) {
+	fmt.Println("[INFO]", "Entering endpoint "+r.URL.RequestURI())
+
+	defer fmt.Println("[INFO]", "Closing current connection...")
+
+	posts, err := repoBlog.List(index, length)
 
 	if HasError(err) {
 		ResponseJSON(w, ServerError())
 		return
-	}
-
-	var posts []Post
-
-	for results.Next() {
-		var post Post
-
-		err := results.Scan(&post.ID, &post.CategoryID, &post.Title, &post.URL, &post.DateCreation, &post.DatePublished, &post.Author, &post.Active)
-
-		if HasError(err) {
-			ResponseJSON(w, ServerError())
-			return
-		}
-
-		posts = append(posts, post)
 	}
 
 	if posts == nil {
@@ -171,37 +94,147 @@ func ListPagedBlog(w http.ResponseWriter, r *http.Request) {
 func InsertBlog(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[INFO]", "Entering endpoint "+r.URL.RequestURI())
 
-	// open connection
-	db := database.Connect()
-
-	defer db.Close()
 	defer fmt.Println("[INFO]", "Closing current connection...")
 
-	// TODO
+	// Get values from Form
+	id, err := strconv.Atoi(r.FormValue("id"))
+	categoryID, err := strconv.Atoi(r.FormValue("categoryid"))
+	title := r.FormValue("title")
+	url := r.FormValue("url")
+	content := r.FormValue("content")
+	dateCreation := r.FormValue("datecreation")
+	datePublished := r.FormValue("datepublished")
+	author := r.FormValue("author")
+	active := byte(0)
+
+	if r.FormValue("active") == "1" {
+		active = byte(1)
+	}
+
+	// Fill the model with data received through POST
+	var model = model.Post{
+		ID:            id,
+		CategoryID:    categoryID,
+		Title:         title,
+		URL:           url,
+		Content:       content,
+		DateCreation:  dateCreation,
+		DatePublished: datePublished,
+		Author:        author,
+		Active:        active,
+	}
+
+	result, err := repoBlog.Insert(model)
+
+	if HasError(err) {
+		ResponseJSON(w, ServerError())
+		return
+	}
+
+	rowsCount, err := result.RowsAffected()
+
+	if HasError(err) {
+		ResponseJSON(w, ServerError())
+		return
+	}
+
+	// Returns json with Response representation
+	if rowsCount > 0 {
+		ResponseJSON(w, OK("Register inserted successfully"))
+	} else {
+		ResponseJSON(w, OK("No rows were affected"))
+	}
 }
 
 // UpdateBlog updates a register from database
 func UpdateBlog(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[INFO]", "Entering endpoint "+r.URL.RequestURI())
 
-	// open connection
-	db := database.Connect()
-
-	defer db.Close()
 	defer fmt.Println("[INFO]", "Closing current connection...")
 
-	// TODO
+	// Get values from Form
+	id, err := strconv.Atoi(r.FormValue("id"))
+	categoryID, err := strconv.Atoi(r.FormValue("categoryid"))
+	title := r.FormValue("title")
+	url := r.FormValue("url")
+	content := r.FormValue("content")
+	dateCreation := r.FormValue("datecreation")
+	datePublished := r.FormValue("datepublished")
+	author := r.FormValue("author")
+	active := byte(0)
+
+	if r.FormValue("active") == "1" {
+		active = byte(1)
+	}
+
+	// Fill the model with data received through POST
+	var model = model.Post{
+		ID:            id,
+		CategoryID:    categoryID,
+		Title:         title,
+		URL:           url,
+		Content:       content,
+		DateCreation:  dateCreation,
+		DatePublished: datePublished,
+		Author:        author,
+		Active:        active,
+	}
+
+	result, err := repoBlog.Update(model)
+
+	if HasError(err) {
+		ResponseJSON(w, ServerError())
+		return
+	}
+
+	rowsCount, err := result.RowsAffected()
+
+	if HasError(err) {
+		ResponseJSON(w, ServerError())
+		return
+	}
+
+	// Returns json with Response representation
+	if rowsCount > 0 {
+		ResponseJSON(w, OK("Register updated successfully"))
+		return
+	}
+
+	ResponseJSON(w, OK("No rows were affected"))
 }
 
 // DeleteBlog removes a register from database
 func DeleteBlog(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[INFO]", "Entering endpoint "+r.URL.RequestURI())
 
-	// open connection
-	db := database.Connect()
-
-	defer db.Close()
 	defer fmt.Println("[INFO]", "Closing current connection...")
 
-	// TODO
+	id, err := strconv.Atoi(r.FormValue("id"))
+
+	if HasError(err) {
+		ResponseJSON(w, ServerError())
+		return
+	}
+
+	result, err := repoBlog.Delete(id)
+
+	if HasError(err) {
+		ResponseJSON(w, ServerError())
+		return
+	}
+
+	rowsCount, err := result.RowsAffected()
+
+	if HasError(err) {
+		ResponseJSON(w, ServerError())
+		return
+	}
+
+	// Returns json with Response representation
+	if rowsCount > 0 {
+		ResponseJSON(w, OK("Register deleted successfully"))
+		return
+	}
+
+	ResponseJSON(w, OK("No rows were affected"))
 }

@@ -28,6 +28,10 @@ MySQL Driver
 go get github.com/go-sql-driver/mysql
 ```
 
+## References
+
+- [Go](GO.md)
+
 ## Ignore
 
 Some pieces from code, since it's all brand new.

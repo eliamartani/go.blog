@@ -37,6 +37,11 @@ func ToResponse(jsonValue interface{}) Response {
 	return Response{Code: http.StatusOK, Data: jsonValue}
 }
 
+// OK return a JSON object when the need is to return a message with Status OK
+func OK(message string) Response {
+	return Response{Code: http.StatusOK, Message: message}
+}
+
 // NoDataFound return a JSON object when no data is found
 func NoDataFound() Response {
 	return Response{Code: http.StatusOK, Message: "No data found"}
