@@ -21,22 +21,17 @@ func GetBlog(w http.ResponseWriter, r *http.Request) {
 	// get variables
 	vars := mux.Vars(r)
 
-	key, err := strconv.Atoi(vars["id"])
+	url := vars["url"]
+
+	post, err := repoBlog.GetByURL(url)
 
 	if HasError(err) {
-		ResponseJSON(w, ServerError())
-		return
-	}
-
-	post, err := repoBlog.Get(key)
-
-	if HasError(err) {
-		ResponseJSON(w, ServerError())
+		ServerErrorResponse(w, "")
 		return
 	}
 
 	// returns json with Response representation
-	ResponseJSON(w, ToResponse(post))
+	OKDataResponse(w, "", post)
 }
 
 // ListBlog retrieve all blog posts
@@ -53,7 +48,7 @@ func ListPagedBlog(w http.ResponseWriter, r *http.Request) {
 
 	//check if length is valid
 	if HasError(err) {
-		ResponseJSON(w, ServerError())
+		ServerErrorResponse(w, "")
 		return
 	}
 
@@ -61,7 +56,7 @@ func ListPagedBlog(w http.ResponseWriter, r *http.Request) {
 
 	// check if index is valid
 	if HasError(err) {
-		ResponseJSON(w, ServerError())
+		ServerErrorResponse(w, "")
 		return
 	}
 
@@ -77,17 +72,17 @@ func processListBlog(w http.ResponseWriter, r *http.Request, length int, index i
 	posts, err := repoBlog.List(index, length)
 
 	if HasError(err) {
-		ResponseJSON(w, ServerError())
+		ServerErrorResponse(w, "")
 		return
 	}
 
 	if posts == nil {
-		ResponseJSON(w, NoDataFound())
+		NoDataFoundResponse(w, "")
 		return
 	}
 
 	// returns json with Response representation
-	ResponseJSON(w, ToResponse(posts))
+	OKDataResponse(w, "", posts)
 }
 
 // InsertBlog inserts a register into database
@@ -101,6 +96,8 @@ func InsertBlog(w http.ResponseWriter, r *http.Request) {
 	categoryID, err := strconv.Atoi(r.FormValue("categoryid"))
 	title := r.FormValue("title")
 	url := r.FormValue("url")
+	description := r.FormValue("description")
+	imageURL := r.FormValue("imageurl")
 	content := r.FormValue("content")
 	dateCreation := r.FormValue("datecreation")
 	datePublished := r.FormValue("datepublished")
@@ -117,6 +114,8 @@ func InsertBlog(w http.ResponseWriter, r *http.Request) {
 		CategoryID:    categoryID,
 		Title:         title,
 		URL:           url,
+		Description:   description,
+		ImageURL:      imageURL,
 		Content:       content,
 		DateCreation:  dateCreation,
 		DatePublished: datePublished,
@@ -127,22 +126,22 @@ func InsertBlog(w http.ResponseWriter, r *http.Request) {
 	result, err := repoBlog.Insert(model)
 
 	if HasError(err) {
-		ResponseJSON(w, ServerError())
+		ServerErrorResponse(w, "")
 		return
 	}
 
 	rowsCount, err := result.RowsAffected()
 
 	if HasError(err) {
-		ResponseJSON(w, ServerError())
+		ServerErrorResponse(w, "")
 		return
 	}
 
 	// Returns json with Response representation
 	if rowsCount > 0 {
-		ResponseJSON(w, OK("Register inserted successfully"))
+		OKResponse(w, "Register inserted successfully")
 	} else {
-		ResponseJSON(w, OK("No rows were affected"))
+		OKResponse(w, "No rows were affected")
 	}
 }
 
@@ -157,6 +156,8 @@ func UpdateBlog(w http.ResponseWriter, r *http.Request) {
 	categoryID, err := strconv.Atoi(r.FormValue("categoryid"))
 	title := r.FormValue("title")
 	url := r.FormValue("url")
+	description := r.FormValue("description")
+	imageURL := r.FormValue("imageurl")
 	content := r.FormValue("content")
 	dateCreation := r.FormValue("datecreation")
 	datePublished := r.FormValue("datepublished")
@@ -173,6 +174,8 @@ func UpdateBlog(w http.ResponseWriter, r *http.Request) {
 		CategoryID:    categoryID,
 		Title:         title,
 		URL:           url,
+		Description:   description,
+		ImageURL:      imageURL,
 		Content:       content,
 		DateCreation:  dateCreation,
 		DatePublished: datePublished,
@@ -183,24 +186,23 @@ func UpdateBlog(w http.ResponseWriter, r *http.Request) {
 	result, err := repoBlog.Update(model)
 
 	if HasError(err) {
-		ResponseJSON(w, ServerError())
+		ServerErrorResponse(w, "")
 		return
 	}
 
 	rowsCount, err := result.RowsAffected()
 
 	if HasError(err) {
-		ResponseJSON(w, ServerError())
+		ServerErrorResponse(w, "")
 		return
 	}
 
 	// Returns json with Response representation
 	if rowsCount > 0 {
-		ResponseJSON(w, OK("Register updated successfully"))
-		return
+		OKResponse(w, "Register updated successfully")
+	} else {
+		OKResponse(w, "No rows were affected")
 	}
-
-	ResponseJSON(w, OK("No rows were affected"))
 }
 
 // DeleteBlog removes a register from database
@@ -212,29 +214,28 @@ func DeleteBlog(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.FormValue("id"))
 
 	if HasError(err) {
-		ResponseJSON(w, ServerError())
+		ServerErrorResponse(w, "")
 		return
 	}
 
 	result, err := repoBlog.Delete(id)
 
 	if HasError(err) {
-		ResponseJSON(w, ServerError())
+		ServerErrorResponse(w, "")
 		return
 	}
 
 	rowsCount, err := result.RowsAffected()
 
 	if HasError(err) {
-		ResponseJSON(w, ServerError())
+		ServerErrorResponse(w, "")
 		return
 	}
 
 	// Returns json with Response representation
 	if rowsCount > 0 {
-		ResponseJSON(w, OK("Register deleted successfully"))
-		return
+		OKResponse(w, "Register deleted successfully")
+	} else {
+		OKResponse(w, "No rows were affected")
 	}
-
-	ResponseJSON(w, OK("No rows were affected"))
 }

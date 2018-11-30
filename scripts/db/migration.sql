@@ -11,6 +11,8 @@ CREATE TABLE `godb`.`post` (
   `CategoryID` INT NOT NULL,
   `Title` VARCHAR(150) NULL,
   `Url` VARCHAR(150) NULL,
+  `Description` VARCHAR(500) NULL,
+  `ImageUrl` VARCHAR(200) NULL,
   `Content` TEXT NULL,
   `Author` VARCHAR(50) NULL,
   `DateCreation` DATETIME NOT NULL,

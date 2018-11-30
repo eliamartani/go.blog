@@ -14,7 +14,7 @@ func NewRouter() *mux.Router {
 	router.Methods("POST").Path("/blog").HandlerFunc(api.InsertBlog)
 	router.Methods("PUT").Path("/blog").HandlerFunc(api.UpdateBlog)
 	router.Methods("DELETE").Path("/blog").HandlerFunc(api.DeleteBlog)
-	router.Methods("GET").Path("/blog/{id}").HandlerFunc(api.GetBlog)
+	router.Methods("GET").Path("/blog/{url}").HandlerFunc(api.GetBlog)
 	router.Methods("GET").Path("/blog/{length}/{index}").HandlerFunc(api.ListPagedBlog)
 
 	return router

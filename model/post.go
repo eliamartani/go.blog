@@ -6,6 +6,8 @@ type Post struct {
 	CategoryID    int    `json:"categoryid"`
 	Title         string `json:"title"`
 	URL           string `json:"url"`
+	Description   string `json:"description"`
+	ImageURL      string `json:"imageurl"`
 	Content       string `json:"content"`
 	DateCreation  string `json:"datecreation"`
 	DatePublished string `json:"datepublished"`

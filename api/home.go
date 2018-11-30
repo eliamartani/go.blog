@@ -10,5 +10,5 @@ func GetHome(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[INFO]", "Entering endpoint "+r.URL.RequestURI())
 
 	// returns json with Response representation
-	ResponseJSON(w, ToResponse("There's no place like home"))
+	OKResponse(w, "There's no place like home")
 }
