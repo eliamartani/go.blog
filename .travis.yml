@@ -7,7 +7,7 @@ before_install:
   - cd go.blog
 install:
   - go get github.com/go-sql-driver/mysql/
-  - go get -u github.com/golang/lint/golint
+  - go get github.com/golang/lint/golint
   - go get github.com/gorilla/mux
 script:
   - go build

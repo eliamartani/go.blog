@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	model "../model"
-	repository "../repository"
+	model "github.com/eliamartani/go.blog/model"
+	repository "github.com/eliamartani/go.blog/repository"
 	"github.com/gorilla/mux"
 )
 

@@ -1,7 +1,7 @@
 package main
 
 import (
-	api "./api"
+	api "github.com/eliamartani/go.blog/api"
 	"github.com/gorilla/mux"
 )
 

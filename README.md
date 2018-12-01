@@ -4,6 +4,12 @@
 
 Go must be installed. [Link](https://golang.org/)
 
+Add this repository to your environment by executing this command:
+
+```cmd
+go get github.com/eliamartani/go.blog
+```
+
 ## Run
 
 Windows
@@ -22,7 +28,7 @@ go run *.go
 
 ## Maybe you will need
 
-MySQL Driver
+MySQL Driver:
 
 ```cmd
 go get github.com/go-sql-driver/mysql
