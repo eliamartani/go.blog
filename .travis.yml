@@ -1,12 +1,12 @@
 language: go
-  go:
-    - "1.11.x"
-  before_install:
-    - git clone https://github.com/eliamartani/go.blog.git
-    - cd go.blog
-  install:
-    - go get github.com/go-sql-driver/mysql/
-    - go get -u github.com/golang/lint/golint
-  script:
-    - go build
-    - golint ./...
+
+go:
+  - "1.11.x"
+before_install:
+  - git clone https://github.com/eliamartani/go.blog.git
+  - cd go.blog
+install:
+  - go get github.com/go-sql-driver/mysql/
+  - go get -u github.com/golang/lint/golint
+script:
+  - go build
