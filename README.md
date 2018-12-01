@@ -1,5 +1,7 @@
 # Go
 
+[![Build Status](https://travis-ci.com/eliamartani/go.blog.svg?branch=master)](https://travis-ci.com/eliamartani/go.blog)
+
 ## Install
 
 Go must be installed. [Link](https://golang.org/)
