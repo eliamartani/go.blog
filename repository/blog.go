@@ -56,7 +56,7 @@ func (r RepoBlog) List(index int, length int) ([]model.Post, error) {
 	var list []model.Post
 
 	// Retrieve objects from database
-	results, err := db.Query(r.listQuery, length, index)
+	results, err := db.Query(r.listQuery, length, (index-1)*length)
 
 	// Check if there's something wrong with the query
 	if err != nil {
