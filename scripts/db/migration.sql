@@ -1,9 +1,17 @@
 CREATE DATABASE `godb`
 
+/*
+-- IF NEEDED
+DROP TABLE `godb`.`post_tag`
+DROP TABLE `godb`.`tag`
+DROP TABLE `godb`.`post`
+DROP TABLE `godb`.`category`
+*/
+
 CREATE TABLE `godb`.`category` (
   `ID` INT NOT NULL AUTO_INCREMENT,
   `Title` VARCHAR(50),
-  `Active` TINYINT(1) NULL,
+  `Url` VARCHAR(150) NULL,
   PRIMARY KEY (`ID`));
 
 CREATE TABLE `godb`.`post` (

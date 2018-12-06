@@ -3,7 +3,7 @@ package repository
 import (
 	"database/sql"
 
-	model "github.com/eliamartani/go.blog/model"
+	model "../model"
 )
 
 // RepoBlog defines repository access to Blog
@@ -16,11 +16,46 @@ type RepoBlog struct {
 func NewRepoBlog() RepoBlog {
 	var repoBlog RepoBlog
 
-	repoBlog.getQuery = "SELECT ID, CategoryID, Title, Url, Description, ImageUrl, Content, cast(DateCreation as char) DateCreation, ifnull(cast(DatePublished as char), cast(DateCreation as char)) DatePublished, Author, Active from post WHERE Url = ?"
-	repoBlog.listQuery = `SELECT ID, CategoryID, Title, Url, Description, ImageUrl, cast(DateCreation as char) DateCreation, ifnull(cast(DatePublished as char), cast(DateCreation as char)) DatePublished, Author, Active from post
-	where Active = 1 and (DatePublished <= now() or DatePublished is null)
-	ORDER BY IfNull(DatePublished, DateCreation), ID
-	LIMIT ? OFFSET ?`
+	repoBlog.getQuery = `SELECT
+			c.Title AS CategoryTitle,
+			c.URL AS CategoryURL,
+			GROUP_CONCAT(t.Title ORDER BY t.Title) AS Tags,
+			p.Title,
+			p.Url,
+			p.ImageUrl,
+			p.Description,
+			p.Content,
+			IFNULL(CAST(p.DatePublished AS CHAR), CAST(p.DateCreation AS CHAR)) DatePublished,
+			p.Author
+		FROM post p
+		INNER JOIN category c ON c.ID = p.CategoryID
+		INNER JOIN post_tag pt ON p.ID = pt.PostID
+		INNER JOIN tag t ON t.ID = pt.TagID
+		WHERE
+			p.Url = ?`
+	repoBlog.listQuery = `SELECT
+			c.Title AS CategoryTitle,
+			c.URL AS CategoryURL,
+			posts.Tags,
+			p.Title,
+			p.Url,
+			p.ImageUrl,
+			p.Description,
+			IFNULL(CAST(p.DatePublished AS CHAR), CAST(p.DateCreation AS CHAR)) DatePublished,
+			p.Author
+		FROM post p
+		INNER JOIN (
+			SELECT post.ID, GROUP_CONCAT(t.Title ORDER BY t.Title) AS Tags
+			FROM post
+			INNER JOIN post_tag pt ON post.ID = pt.PostID
+			INNER JOIN tag t ON t.ID = pt.TagID
+			WHERE
+				post.Active = 1 AND (post.DatePublished <= NOW() OR post.DatePublished IS NULL)
+			GROUP BY post.ID
+		) posts ON posts.ID = p.ID
+		INNER JOIN category c ON c.ID = p.CategoryID
+		ORDER BY IFNULL(p.DatePublished, p.DateCreation), p.ID
+		LIMIT ? OFFSET ?`
 	repoBlog.insertQuery = "INSERT INTO post (ID, CategoryID, Title, Url, Description, ImageUrl, Content, Author, DateCreation, DatePublished, Active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	repoBlog.updateQuery = "UPDATE post SET CategoryID = IFNULL(?, CategoryID), Title = IFNULL(?, Title), Url = IFNULL(?, Url), Description = IFNULL(?, Description), ImageUrl = IFNULL(?, ImageUrl), Content = IFNULL(?, Content), Author = IFNULL(?, Author), DateCreation = IFNULL(?, DateCreation), DatePublished = IFNULL(?, DatePublished), Active = IFNULL(?, Active) WHERE ID = ?"
 	repoBlog.deleteQuery = "DELETE FROM post WHERE ID = ?"
@@ -29,31 +64,41 @@ func NewRepoBlog() RepoBlog {
 }
 
 // GetByURL returns a model representation obtained from database
-func (r RepoBlog) GetByURL(url string) (model.Post, error) {
+func (r RepoBlog) GetByURL(url string) (model.Posts, error) {
 	// Open connection
 	db := r.Connect()
 
 	// Close the connection at the end
 	defer db.Close()
 
-	var model model.Post
+	var model model.Posts
 
 	// Read data from register
-	err := db.QueryRow(r.getQuery, url).Scan(&model.ID, &model.CategoryID, &model.Title, &model.URL, &model.Description, &model.ImageURL, &model.Content, &model.DateCreation, &model.DatePublished, &model.Author, &model.Active)
+	err := db.QueryRow(r.getQuery, url).Scan(
+		&model.CategoryTitle,
+		&model.CategoryURL,
+		&model.Tags,
+		&model.Title,
+		&model.URL,
+		&model.ImageURL,
+		&model.Description,
+		&model.Content,
+		&model.DatePublished,
+		&model.Author)
 
 	// Return post model and error
 	return model, err
 }
 
 // List returns a paged list of model obtained from database
-func (r RepoBlog) List(index int, length int) ([]model.Post, error) {
+func (r RepoBlog) List(index int, length int) ([]model.Posts, error) {
 	// Open connection
 	db := r.Connect()
 
 	// Close the connection at the end
 	defer db.Close()
 
-	var list []model.Post
+	var list []model.Posts
 
 	// Retrieve objects from database
 	results, err := db.Query(r.listQuery, length, (index-1)*length)
@@ -64,9 +109,18 @@ func (r RepoBlog) List(index int, length int) ([]model.Post, error) {
 	}
 
 	for results.Next() {
-		var model model.Post
+		var model model.Posts
 
-		err := results.Scan(&model.ID, &model.CategoryID, &model.Title, &model.URL, &model.Description, &model.ImageURL, &model.DateCreation, &model.DatePublished, &model.Author, &model.Active)
+		err := results.Scan(
+			&model.CategoryTitle,
+			&model.CategoryURL,
+			&model.Tags,
+			&model.Title,
+			&model.URL,
+			&model.ImageURL,
+			&model.Description,
+			&model.DatePublished,
+			&model.Author)
 
 		// Check if there's something wrong with scanning the row
 		if err != nil {

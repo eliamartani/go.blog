@@ -1,6 +1,6 @@
 package model
 
-// Post is an entity representation from database
+// Post is an entity representation retrieved from database
 type Post struct {
 	ID            int    `json:"id"`
 	CategoryID    int    `json:"categoryid"`
