@@ -3,7 +3,7 @@ package repository
 import (
 	"database/sql"
 
-	model "../model"
+	model "github.com/eliamartani/go.blog/model"
 )
 
 // RepoBlog defines repository access to Blog
